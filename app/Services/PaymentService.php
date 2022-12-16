@@ -4,6 +4,8 @@ namespace App\Services;
 
 
 use App\Models\Payment;
+use Illuminate\Support\Facades\Log;
+
 
 class PaymentService
 {
@@ -18,6 +20,7 @@ class PaymentService
         $this->class = '\\App\\Payments\\' . $this->method;
         if (!class_exists($this->class)) abort(500, 'gate is not found');
         if ($id) $payment = Payment::find($id)->toArray();
+        Payment::where('uuid', $uuid)->toSql();
         if ($uuid) $payment = Payment::where('uuid', $uuid)->first()->toArray();
         $this->config = [];
         if (isset($payment)) {
@@ -28,12 +31,22 @@ class PaymentService
             $this->config['notify_domain'] = $payment['notify_domain'];
         };
         $this->payment = new $this->class($this->config);
+
+        Log::debug(['payment' => $this->payment]);
+        Log::debug(['config' => $this->config]);
     }
 
     public function notify($params)
     {
+        Log::debug(['config' => $this->config]);
+        Log::debug(['payment' => $this->payment]);
+        Log::debug(['$params' => $params]);
         if (!$this->config['enable']) abort(500, 'gate is not enable');
-        return $this->payment->notify($params);
+        // return $this->payment->notify($params);
+        return [
+            'trade_no' => $params['out_trade_no'],
+            'callback_no' => $params['trade_no']
+        ];
     }
 
     public function pay($order)
